@@ -15,39 +15,27 @@
     </h2>
 
     <div class="button-group">
-        <button onclick="startCamera()">
-            Turn Camera On
-        </button>
-
-        <button onclick="stopCamera()">
-            Turn Camera Off
-        </button>
+        <button onclick="startCamera()">Turn Camera On</button>
+        <button onclick="stopCamera()">Turn Camera Off</button>
     </div>
 
-    <!-- Live Camera -->
-    <video id="camera" autoplay playsinline></video>
+    <video id="camera" autoplay playsinline muted></video>
 
-    <!-- Hidden canvas -->
     <canvas id="canvas" style="display:none;"></canvas>
 
-    <!-- Detection output -->
     <p id="result">Camera is off</p>
 
 </div>
 
 <script>
-
 const video = document.getElementById("camera");
 const canvas = document.getElementById("canvas");
 const result = document.getElementById("result");
 
 let cameraStream = null;
 let detectionInterval = null;
+let isDetecting = false;
 
-
-/* =========================
-   START CAMERA
-========================= */
 async function startCamera() {
     if (cameraStream) {
         return;
@@ -63,93 +51,91 @@ async function startCamera() {
 
         video.srcObject = cameraStream;
         result.innerText = "Camera started";
+        result.style.color = "white";
+        result.style.fontSize = "1.5rem";
 
         detectionInterval = setInterval(() => {
-            if (video.videoWidth > 0) {
+            if (video.videoWidth > 0 && !isDetecting) {
                 detectFrame();
             }
-        }, 1000);
+        }, 1500);
 
     } catch (err) {
         console.error(err);
         result.innerText = "Camera access denied";
+        result.style.color = "red";
     }
 }
 
-
-/* =========================
-   STOP CAMERA
-========================= */
-
 function stopCamera() {
-
     if (cameraStream) {
-
-        cameraStream.getTracks().forEach(track => {
-            track.stop();
-        });
-
+        cameraStream.getTracks().forEach(track => track.stop());
         video.srcObject = null;
-
         cameraStream = null;
     }
 
-    // stop detection loop
     if (detectionInterval) {
         clearInterval(detectionInterval);
         detectionInterval = null;
     }
 
+    isDetecting = false;
+
     result.innerText = "Camera is off";
+    result.style.color = "white";
+    result.style.fontSize = "1.5rem";
 }
 
-
-/* =========================
-   SEND FRAME TO FLASK
-========================= */
-
 async function detectFrame() {
+    isDetecting = true;
 
     try {
-
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
 
         const ctx = canvas.getContext("2d");
-
         ctx.drawImage(video, 0, 0);
 
-        const imageData = canvas.toDataURL("image/jpeg");
+        const imageData = canvas.toDataURL("image/jpeg", 0.7);
 
         const response = await fetch("/detect", {
-
             method: "POST",
-
             headers: {
                 "Content-Type": "application/json"
             },
-
             body: JSON.stringify({
                 image: imageData
             })
-
         });
 
         const data = await response.json();
 
+        if (!response.ok) {
+            result.innerText = data.message || "Server error";
+            result.style.color = "red";
+            return;
+        }
+
         result.innerText = data.message;
 
-    }
+        if (data.danger) {
+            result.style.color = "red";
+            result.style.fontSize = "3rem";
+            result.style.fontWeight = "bold";
+        } else {
+            result.style.color = "white";
+            result.style.fontSize = "1.5rem";
+            result.style.fontWeight = "bold";
+        }
 
-    catch (err) {
-
+    } catch (err) {
         console.error(err);
-
-        result.innerText = "Detection error";
-
+        result.innerText = "Detection failed";
+        result.style.color = "red";
+    } finally {
+        isDetecting = false;
     }
 }
-
 </script>
 
 {% endblock %}

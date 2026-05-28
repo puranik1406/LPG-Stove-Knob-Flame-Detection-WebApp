@@ -3,11 +3,16 @@ from ultralytics import YOLO
 import cv2
 import numpy as np
 import base64
+import os
 
 app = Flask(__name__)
 
-# Put best.pt in the same folder as app.py
-model = YOLO("best.pt")
+MODEL_PATH = "best.pt"
+
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError("best.pt not found. Put best.pt in the same folder as app.py")
+
+model = YOLO(MODEL_PATH)
 
 
 @app.route("/")
@@ -18,15 +23,27 @@ def home():
 @app.route("/detect", methods=["POST"])
 def detect():
     try:
-        data = request.json["image"]
+        data = request.get_json()
 
-        image_data = data.split(",")[1]
+        if not data or "image" not in data:
+            return jsonify({
+                "message": "No image received",
+                "danger": False
+            }), 400
+
+        image_data = data["image"].split(",")[1]
         image_bytes = base64.b64decode(image_data)
 
         np_arr = np.frombuffer(image_bytes, np.uint8)
         frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-        results = model(frame)
+        if frame is None:
+            return jsonify({
+                "message": "Invalid image",
+                "danger": False
+            }), 400
+
+        results = model(frame, imgsz=320, conf=0.5)
 
         detected_objects = []
         danger_detected = False
@@ -43,12 +60,6 @@ def detect():
                     if class_id == 2:
                         danger_detected = True
 
-        # YOLO draws bounding boxes automatically
-        annotated_frame = results[0].plot()
-
-        _, buffer = cv2.imencode(".jpg", annotated_frame)
-        processed_image = base64.b64encode(buffer).decode("utf-8")
-
         if danger_detected:
             message = "DANGER DANGER"
             danger = True
@@ -61,18 +72,17 @@ def detect():
 
         return jsonify({
             "message": message,
-            "danger": danger,
-            "image": processed_image
+            "danger": danger
         })
 
     except Exception as e:
-        print("Detection error:", e)
+        print("Detection error:", str(e), flush=True)
+
         return jsonify({
-            "message": "Detection error",
-            "danger": False,
-            "image": None
-        })
+            "message": "Detection error: " + str(e),
+            "danger": False
+        }), 500
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
