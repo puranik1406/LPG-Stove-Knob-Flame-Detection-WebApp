@@ -72,8 +72,8 @@ project/
 ## Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/yourrepo.git
-cd yourrepo
+git clone https://github.com/puranik1406/LPG-Stove-Knob-Flame-Detection-WebApp.git
+cd LPG-Stove-Knob-Flame-Detection-WebApp
 ```
 
 ## Install Dependencies
