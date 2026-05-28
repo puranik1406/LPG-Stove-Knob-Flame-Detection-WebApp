@@ -53,13 +53,15 @@ project/
 ├── app.py
 ├── best.pt
 ├── requirements.txt
+├── Procfile
 │
 ├── templates/
 │   └── index.html
+|   ├── base.html
 │
 ├── static/
 │   ├── css/
-│   │   └── style.css
+│   │   └── main.css
 │   │
 │   └── images/
 │       └── flamebackground.webp
