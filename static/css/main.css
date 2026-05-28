@@ -1,0 +1,80 @@
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    min-height: 100%;
+    margin: 0;
+}
+
+body {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+    color: #000000;
+    font-family: Arial, Helvetica, sans-serif;
+    text-align: center;
+    overflow-y: auto;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image: url("../images/flamebackground.webp");
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    opacity: 0.4;
+}
+
+.page-content {
+    width: min(90vw, 900px);
+    padding: 32px;
+}
+
+h1,
+h2 {
+    margin: 0;
+}
+
+h1 {
+    font-size: clamp(1rem, 4vw, 3.5rem);
+    line-height: 1.1;
+}
+
+h2 {
+    margin-top: 16px;
+    font-size: clamp(1rem, 3vw, 1.75rem);
+    font-weight: 400;
+    line-height: 1.4;
+}
+
+#camera {
+    width: min(90vw, 700px);
+    border-radius: 16px;
+    border: 3px solid white;
+    margin-top: 30px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.4);
+}
+
+#result {
+    margin-top: 20px;
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: white;
+}
+
+button {
+    margin: 20px 8px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+}

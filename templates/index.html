@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>LPG Knob & Flame Detector</title>
+{% endblock %}
+
+{% block body %}
+
+<div class="page-content">
+
+    <h1>LPG Knob & Flame Detector</h1>
+
+    <h2>
+        Prevent Gas Leaks by continuously monitoring your stove and flame
+    </h2>
+
+    <div class="button-group">
+        <button onclick="startCamera()">
+            Turn Camera On
+        </button>
+
+        <button onclick="stopCamera()">
+            Turn Camera Off
+        </button>
+    </div>
+
+    <!-- Live Camera -->
+    <video id="camera" autoplay playsinline></video>
+
+    <!-- Hidden canvas -->
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <!-- Detection output -->
+    <p id="result">Camera is off</p>
+
+</div>
+
+<script>
+
+const video = document.getElementById("camera");
+const canvas = document.getElementById("canvas");
+const result = document.getElementById("result");
+
+let cameraStream = null;
+let detectionInterval = null;
+
+
+/* =========================
+   START CAMERA
+========================= */
+
+async function startCamera() {
+
+    // prevent duplicate starts
+    if (cameraStream) {
+        return;
+    }
+
+    try {
+
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+        });
+
+        video.srcObject = cameraStream;
+
+        result.innerText = "Camera started";
+
+        // start detection loop
+        detectionInterval = setInterval(() => {
+
+            if (video.videoWidth > 0) {
+                detectFrame();
+            }
+
+        }, 1000);
+
+    }
+
+    catch (err) {
+
+        console.error(err);
+
+        result.innerText = "Camera access denied";
+
+    }
+}
+
+
+/* =========================
+   STOP CAMERA
+========================= */
+
+function stopCamera() {
+
+    if (cameraStream) {
+
+        cameraStream.getTracks().forEach(track => {
+            track.stop();
+        });
+
+        video.srcObject = null;
+
+        cameraStream = null;
+    }
+
+    // stop detection loop
+    if (detectionInterval) {
+        clearInterval(detectionInterval);
+        detectionInterval = null;
+    }
+
+    result.innerText = "Camera is off";
+}
+
+
+/* =========================
+   SEND FRAME TO FLASK
+========================= */
+
+async function detectFrame() {
+
+    try {
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        const ctx = canvas.getContext("2d");
+
+        ctx.drawImage(video, 0, 0);
+
+        const imageData = canvas.toDataURL("image/jpeg");
+
+        const response = await fetch("/detect", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                image: imageData
+            })
+
+        });
+
+        const data = await response.json();
+
+        result.innerText = data.message;
+
+    }
+
+    catch (err) {
+
+        console.error(err);
+
+        result.innerText = "Detection error";
+
+    }
+}
+
+</script>
+
+{% endblock %}
